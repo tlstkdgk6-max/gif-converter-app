@@ -25,7 +25,7 @@
     <title>영상 GIF 용량 맞춤 변환기</title>
     <meta
       name="description"
-      content="브라우저에서 영상 파일을 목표 용량 이하의 GIF로 변환합니다."
+      content="브라우저에서 영상이나 GIF 파일을 목표 용량 이하의 GIF로 변환합니다."
     />
     <style>
       :root {
@@ -316,8 +316,8 @@
       <header>
         <h1>영상 GIF 용량 맞춤 변환기</h1>
         <p class="lead">
-          영상 파일을 올리면 원본 가로·세로 픽셀을 유지하면서 목표 용량 이하의
-          GIF를 브라우저에서 만듭니다.
+          영상이나 GIF 파일을 올리면 원본 가로·세로 픽셀을 유지하면서 목표 용량
+          이하의 GIF를 브라우저에서 만듭니다.
         </p>
       </header>
 
@@ -326,19 +326,19 @@
           <div class="panel">
             <div class="dropzone" id="dropzone">
               <div>
-                <strong>영상 파일 첨부</strong>
-                <span>MP4, MOV, M4V, AVI, WEBM, MKV 파일을 사용할 수 있습니다.</span>
+                <strong>영상 또는 GIF 파일 첨부</strong>
+                <span>MP4, MOV, M4V, AVI, WEBM, MKV, GIF 파일을 사용할 수 있습니다.</span>
                 <input
                   id="file"
                   type="file"
-                  accept="video/mp4,video/quicktime,video/x-m4v,video/x-msvideo,video/webm,video/x-matroska"
+                  accept="video/mp4,video/quicktime,video/x-m4v,video/x-msvideo,video/webm,video/x-matroska,image/gif,.gif"
                 />
               </div>
             </div>
 
             <div class="notice">
               첫 변환 때 FFmpeg 엔진을 내려받기 때문에 잠시 걸릴 수 있습니다.
-              긴 영상이나 4K 영상은 브라우저 메모리 사용량이 커집니다.
+              긴 영상, 큰 GIF, 4K 영상은 브라우저 메모리 사용량이 커집니다.
             </div>
 
             <div class="status" id="status">파일을 선택하면 변환을 시작할 수 있습니다.</div>
@@ -385,7 +385,7 @@
           </label>
 
           <p class="hint">
-            GIF는 색상 수가 제한되는 형식이라 영상과 완전히 동일한 색을 유지할 수
+            GIF는 색상 수가 제한되는 형식이라 원본과 완전히 동일한 색을 유지할 수
             없습니다. 이 앱은 팔레트 최적화로 최대한 비슷하게 맞춥니다.
           </p>
 
@@ -466,7 +466,7 @@
 
         try {
           await loadFfmpeg();
-          const metadata = await readVideoMetadata(selectedFile);
+          const metadata = await readInputMetadata(selectedFile);
           if (metadata.duration > 30) {
             statusEl.textContent = "30초가 넘는 영상입니다. 변환 시간이 오래 걸릴 수 있습니다.";
           }
@@ -508,14 +508,14 @@
 
           if (!validResults.length) {
             throw new Error(
-              "원본 해상도를 유지한 상태에서 목표 용량에 맞추지 못했습니다. 영상 길이를 줄이거나 목표 용량을 높여 주세요."
+              "원본 해상도를 유지한 상태에서 목표 용량에 맞추지 못했습니다. 영상/GIF 길이를 줄이거나 목표 용량을 높여 주세요."
             );
           }
 
           validResults.sort((a, b) => b.score - a.score || b.bytes - a.bytes);
           const best = validResults[0];
           showResult(best, metadata, selectedFile.name);
-          statusEl.textContent = "변환 완료 · 영상 전체 구간이 GIF에 포함되었습니다.";
+          statusEl.textContent = "변환 완료 · 전체 구간이 GIF에 포함되었습니다.";
         } catch (error) {
           messageEl.textContent = error instanceof Error ? error.message : String(error);
           statusEl.textContent = "변환을 완료하지 못했습니다.";
@@ -537,6 +537,11 @@
         progressEl.value = 0;
       }
 
+      function readInputMetadata(file) {
+        if (isGif(file)) return readGifMetadata(file);
+        return readVideoMetadata(file);
+      }
+
       function readVideoMetadata(file) {
         return new Promise((resolve, reject) => {
           const video = document.createElement("video");
@@ -555,6 +560,24 @@
             reject(new Error("영상 정보를 읽지 못했습니다."));
           };
           video.src = url;
+        });
+      }
+
+      function readGifMetadata(file) {
+        return new Promise((resolve, reject) => {
+          const image = new Image();
+          const url = URL.createObjectURL(file);
+          image.onload = () => {
+            const width = image.naturalWidth || image.width || 0;
+            const height = image.naturalHeight || image.height || 0;
+            URL.revokeObjectURL(url);
+            resolve({ duration: 0, width, height, fps: 15 });
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(url);
+            reject(new Error("GIF 정보를 읽지 못했습니다."));
+          };
+          image.src = url;
         });
       }
 
@@ -687,6 +710,10 @@
       function extensionFor(name) {
         const match = name.toLowerCase().match(/\.[a-z0-9]+$/);
         return match ? match[0] : ".mp4";
+      }
+
+      function isGif(file) {
+        return file.type === "image/gif" || /\.gif$/i.test(file.name);
       }
 
       function stripExtension(name) {
