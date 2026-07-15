@@ -2,6 +2,12 @@
 <html lang="ko">
   <head>
     <meta charset="utf-8" />
+    <script>
+      if (!window.crossOriginIsolated && "serviceWorker" in navigator && !sessionStorage.getItem("coiReloaded")) {
+        sessionStorage.setItem("coiReloaded", "1");
+        navigator.serviceWorker.register("./coi-serviceworker.js").then(() => location.reload());
+      }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>영상 GIF 용량 맞춤 변환기</title>
     <meta
@@ -381,7 +387,7 @@
       </footer>
     </main>
 
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script crossorigin="anonymous" src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <script>
       const fileInput = document.querySelector("#file");
       const dropzone = document.querySelector("#dropzone");
