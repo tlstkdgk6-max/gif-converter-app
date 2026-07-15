@@ -468,7 +468,6 @@
             if (data.byteLength <= targetBytes) {
               validResults.push({
                 score: qualityScore(fps, colors, modeEl.value),
-                name: outputName,
                 data,
                 bytes: data.byteLength,
                 fps,
@@ -681,7 +680,7 @@
       }
 
       function showResult(best, metadata, originalName) {
-        const blob = new Blob([best.data.buffer], { type: "image/gif" });
+        const blob = new Blob([best.data], { type: "image/gif" });
         if (lastObjectUrl) URL.revokeObjectURL(lastObjectUrl);
         lastObjectUrl = URL.createObjectURL(blob);
 
