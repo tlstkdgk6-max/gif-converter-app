@@ -511,7 +511,9 @@
         progressEl.removeAttribute("value");
 
         const base = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
+        const ffmpegBase = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm";
         await ffmpeg.load({
+          workerURL: await toBlobURL(`${ffmpegBase}/worker.js`, "text/javascript"),
           coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript"),
           wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm"),
         });
