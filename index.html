@@ -3,10 +3,23 @@
   <head>
     <meta charset="utf-8" />
     <script>
-      if (!window.crossOriginIsolated && "serviceWorker" in navigator && !sessionStorage.getItem("coiReloaded")) {
-        sessionStorage.setItem("coiReloaded", "1");
-        navigator.serviceWorker.register("./coi-serviceworker.js").then(() => location.reload());
-      }
+      (() => {
+        if (window.crossOriginIsolated || !("serviceWorker" in navigator)) return;
+
+        let reloaded = false;
+        const reloadOnce = () => {
+          if (reloaded) return;
+          reloaded = true;
+          location.reload();
+        };
+
+        navigator.serviceWorker.addEventListener("controllerchange", reloadOnce);
+        navigator.serviceWorker.register("./coi-serviceworker.js").then(() => {
+          navigator.serviceWorker.ready.then(() => {
+            if (!navigator.serviceWorker.controller) reloadOnce();
+          });
+        });
+      })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>영상 GIF 용량 맞춤 변환기</title>
