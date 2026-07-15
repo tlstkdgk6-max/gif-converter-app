@@ -381,10 +381,8 @@
       </footer>
     </main>
 
-    <script type="module">
-      import { FFmpeg } from "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm/index.js";
-      import { fetchFile, toBlobURL } from "https://unpkg.com/@ffmpeg/util@0.12.2/dist/esm/index.js";
-
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script>
       const fileInput = document.querySelector("#file");
       const dropzone = document.querySelector("#dropzone");
       const convertButton = document.querySelector("#convert");
@@ -402,7 +400,11 @@
       const statColors = document.querySelector("#statColors");
       const statBytes = document.querySelector("#statBytes");
 
-      const ffmpeg = new FFmpeg();
+      const { createFFmpeg, fetchFile } = FFmpeg;
+      const ffmpeg = createFFmpeg({
+        log: false,
+        corePath: "https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js",
+      });
       let ffmpegLoaded = false;
       let selectedFile = null;
       let lastObjectUrl = null;
@@ -453,7 +455,7 @@
           const extension = extensionFor(selectedFile.name);
           const inputName = `input${extension}`;
           await safeDelete(inputName);
-          await ffmpeg.writeFile(inputName, await fetchFile(selectedFile));
+          ffmpeg.FS("writeFile", inputName, await fetchFile(selectedFile));
 
           const targetBytes = Number(targetMbEl.value) * 1_000_000 * 0.98;
           const profiles = buildProfiles(metadata.fps, modeEl.value);
@@ -469,7 +471,7 @@
             const outputName = `trial_${index + 1}_${fps}fps_${colors}c.gif`;
             await safeDelete(outputName);
             await encodeGif(inputName, outputName, fps, colors, ditherEl.value);
-            const data = await ffmpeg.readFile(outputName);
+            const data = ffmpeg.FS("readFile", outputName);
 
             if (data.byteLength <= targetBytes) {
               validResults.push({
@@ -510,13 +512,7 @@
         progressEl.classList.add("visible");
         progressEl.removeAttribute("value");
 
-        const base = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
-        const ffmpegBase = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/esm";
-        await ffmpeg.load({
-          classWorkerURL: await toBlobURL(`${ffmpegBase}/worker.js`, "text/javascript"),
-          coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, "text/javascript"),
-          wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, "application/wasm"),
-        });
+        await ffmpeg.load();
 
         ffmpegLoaded = true;
         progressEl.value = 0;
@@ -555,7 +551,7 @@
           "0",
           outputName,
         ];
-        await ffmpeg.exec(args);
+        await ffmpeg.run(...args);
       }
 
       function buildProfiles(sourceFps, mode) {
@@ -663,7 +659,7 @@
 
       async function safeDelete(name) {
         try {
-          await ffmpeg.deleteFile(name);
+          ffmpeg.FS("unlink", name);
         } catch {
           // File does not exist yet.
         }
